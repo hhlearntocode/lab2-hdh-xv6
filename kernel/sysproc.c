@@ -12,7 +12,7 @@ sys_exit(void)
   int n;
   argint(0, &n);
   exit(n);
-  return 0;  // not reached
+  return 0; // not reached
 }
 
 uint64
@@ -43,7 +43,7 @@ sys_sbrk(void)
 
   argint(0, &n);
   addr = myproc()->sz;
-  if(growproc(n) < 0)
+  if (growproc(n) < 0)
     return -1;
   return addr;
 }
@@ -54,12 +54,13 @@ sys_sleep(void)
   int n;
   uint ticks0;
 
-
   argint(0, &n);
   acquire(&tickslock);
   ticks0 = ticks;
-  while(ticks - ticks0 < n){
-    if(killed(myproc())){
+  while (ticks - ticks0 < n)
+  {
+    if (killed(myproc()))
+    {
       release(&tickslock);
       return -1;
     }
@@ -69,13 +70,45 @@ sys_sleep(void)
   return 0;
 }
 
-
 #ifdef LAB_PGTBL
-int
-sys_pgaccess(void)
+uint64 sys_pgaccess(void)
 {
-  // lab pgtbl: your code here.
-  return 0;
+  uint64 buf;     // Địa chỉ ảo (buffer)
+  int size;       // Số lượng trang
+  uint64 abits;   // Địa chỉ lưu kết quả (user space)
+
+  // 1. Lấy tham số
+  argaddr(0, &buf);
+  argint(1, &size);
+  argaddr(2, &abits);
+
+  // 2. Kiểm tra tính hợp lệ của tham số logic
+  // Giới hạn 64 trang để tránh tràn bitmask uint64
+  if (size > 64 || size < 0) 
+    return -1;
+
+  uint64 res_mask = 0;
+  struct proc *p = myproc();
+
+  // 3. Duyệt
+  for (int i = 0; i < size; i++)
+  {
+    uint64 va = buf + i * PGSIZE;
+    
+    // Tìm PTE
+    pte_t *pte = walk(p->pagetable, va, 0);
+
+    // Kiểm tra: PTE tồn tại + Bit Valid (V) + Bit Accessed (A)
+    if (pte != 0 && (*pte & PTE_V) && (*pte & PTE_A))
+    {
+      *pte &= ~PTE_A;       // Xóa bit Accessed (A) để reset trạng thái
+      res_mask |= (1ULL << i); // Đánh dấu trang thứ i đã được truy cập
+    }
+  }
+
+  // 4. Copy kết quả ra user space
+  // Trả về kết quả của copyout: 0 nếu thành công, -1 nếu lỗi
+  return copyout(p->pagetable, abits, (char *)&res_mask, sizeof(res_mask));
 }
 #endif
 
