@@ -1,0 +1,29 @@
+1. Which registers contain arguments to functions? For example, which register holds 13 in main's call to printf? 
+Trả lời: a0, a1, a2, a3, a4, a5. Trong RISC-V, đối số thứ nhất nằm ở a0, thứ hai ở a1, v.v. Trong hàm main của call.c, giá trị 13 là tham số thứ 3 của hàm printf (sau format string và tham số đầu tiên), nên nó sẽ nằm trong thanh ghi a2.
+
+2. Where is the call to function f in the assembly code for main? Where is the call to g?
+Trả lời: Không có lệnh jalr hay call nào cho f hoặc g. Trình biên dịch đã thực hiện nhúng trực tiếp code của hàm con vào hàm cha để tối ưu hóa vì các hàm này quá ngắn.
+
+3. At what address is the function printf located?
+Trả lời: Mở file user/call.asm, tìm dòng 0000000000000xxx <printf>: để lấy địa chỉ.
+
+4. What value is in the register ra just after the jalr to printf in main?
+Trả lời: Địa chỉ của lệnh ngay sau lệnh jalr (hoặc auipc/jalr).
+
+5. Run the following code. 
+ unsigned int i = 0x00646c72; 
+ printf("H%x Wo%s", 57616, (char *) &i); 
+What is the output? Here's an ASCII table that maps bytes to characters. 
+The output depends on that fact that the RISC-V is little-endian. If the RISC-V were instead big-endian what would you set i to in order to yield the same output? Would you need to change 57616 to a different value? 
+
+Trả lời: HE110 World.
+57616 ở hệ thập phân chuyển sang hex là E110. => In ra HE110.
+i = 0x00646c72. Vì RISC-V là Little-Endian, trong bộ nhớ nó sẽ lưu ngược lại theo từng byte: 72 ('r'), 6c ('l'), 64 ('d'), 00 ('\0'). Khi in dưới dạng string (%s), nó đọc từ byte thấp đến cao: "rld".
+Kết hợp với "Wo": "World".
+Nếu là Big-Endian: Biến i cần đặt là 0x726c6400 để in ra giống vậy. Giá trị 57616 không cần đổi vì nó được truyền theo giá trị, không phải địa chỉ bộ nhớ.
+
+6. In the following code, what is going to be printed after 'y='? (note: the answer is not a specific value.) Why does this happen? 
+ printf("x=%d y=%d", 3);
+
+Trả lời: Một giá trị rác (ngẫu nhiên).
+Giải thích: printf mong đợi đối số thứ 3 (cho y=%d) nằm trong thanh ghi a2. Tuy nhiên code không truyền tham số này, nên printf sẽ in bất cứ giá trị nào đang có sẵn trong thanh ghi a2 tại thời điểm đó.
